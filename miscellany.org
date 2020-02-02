@@ -1,0 +1,354 @@
+;-*- eval: (progn (auto-tangle-mode) (add-hook 'auto-tangle-after-tangle-hook (lambda () (load-file "~/.emacs.d/init.el"))));   -*-
+#  LocalWords:  TODOS yasnippet magit epub LocalWords MELPA ELPA init Spacemacs symlinked Elisp gc PDF Paren alist recentf smtpmail modeline zerodark quickhelp esup TLS vterm flycheck elfeed flyspell autoload descbinds :PROPERTIES:
+#+title: Miscellany.org
+#+options: ^:{} html-postamble:nil
+#+property: header-args :mkdirp yes :tangle (concat (file-name-sans-extension (buffer-file-name)) ".el") :tangle-mode (identity #o444) :results silent :noweb yes
+#+archive: archives/%s::datetree/
+#+startup: indent
+
+#+begin_src emacs-lisp
+<<header>>
+
+<<requirements>>
+
+<<functions>>
+
+<<footer>>
+#+end_src
+* Header
+:PROPERTIES:
+:header-args: :noweb-ref header
+:END:
+
+#+begin_src emacs-lisp
+;;; miscellany.org --- Miscellany: Miscellaneous Emacs functions -*- lexical-binding: t; -**-
+
+;;; Commentary:
+;;A collection of miscellaneous functions.
+;;If a group of functions serve similar purposes, I'll spin them off into their own package.
+
+;;; Code:
+#+end_src
+* Requirements
+:PROPERTIES:
+:header-args: :noweb-ref requirements
+:END:
+#+begin_src emacs-lisp
+(require 'cl-lib)
+#+end_src
+* Functions
+:PROPERTIES:
+:header-args: :noweb-ref functions
+:END:
+** alternate-buffer
+Stolen from Spacemacs.
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/alternate-buffer (&optional window)
+  "Switch back and forth between current and last buffer in the
+current window."
+  (interactive)
+  (let ((current-buffer (window-buffer window)))
+    ;;`switch-to-buffer' will default to calling `other-buffer'
+    ;;if no window is in the windows history
+    (switch-to-buffer
+     (cl-find-if (lambda (buffer)
+                   (not (eq buffer current-buffer)))
+                 (mapcar #'car (window-prev-buffers window))))))
+#+end_src
+** change-theme
+https://www.reddit.com/r/emacs/comments/8qkkh9/poll_theme_activation_on_loading/
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/change-theme (&rest args)
+  "Like `load-theme', but disables all themes before loading the new one."
+  ;;The `interactive' magic is for creating a future-proof passthrough.
+  (interactive (advice-eval-interactive-spec
+                (cadr (interactive-form #'load-theme))))
+  (mapcar #'disable-theme custom-enabled-themes)
+  ;;appending 't' to args allows us to load without confirmation.
+  (let ((args `(,(car args) t)))
+    (apply (if (called-interactively-p 'any) #'funcall-interactively #'funcall)
+           #'load-theme args)))
+#+end_src
+** compute-blood-pressure-table-row
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/compute-blood-pressure-table-row ()
+  "Compute blood pressure table row"
+  (if-let ((systolic (read-number "Systolic:"))
+           (diastolic (read-number "Diastolic:"))
+           (heart-rate (read-number "Heart Rate:"))
+           (date (with-temp-buffer
+                   (org-time-stamp '(16) t)
+                   (buffer-string)))
+           (category (cond
+                      ((or (> systolic 180) (> diastolic 120))
+                       "Hypertensive Crisis")
+                      ((or (> systolic 140) (> diastolic 90))
+                       "High (Stage 2)")
+                      ((or (and (>= systolic 130) (<= systolic 139))
+                           (and (>= diastolic 80) (<= diastolic 89)))
+                       "High (Stage 1)")
+                      ((and (>= systolic 120) (<= systolic 129) (< diastolic 80))
+                       "Elevated")
+                      ((or (and (>= systolic 90) (<= systolic 119))
+                           (and (>= diastolic 60) (<= diastolic 79)))
+                       "Normal")
+                      ((or (< systolic 90) (< diastolic 60))
+                       "Low"))))
+      (mapconcat #'identity `("|#" ,date
+                              ,@(mapcar #'number-to-string
+                                        `(,systolic ,diastolic ,heart-rate))
+                              ,category) "|")
+    (user-error "Unable to compute blood pressure table row")))
+#+end_src
+** kill-other-buffers
+Killing all other buffers can be useful if the list gets cluttered.
+Found at http://emacswiki.org/emacs/KillingBuffers
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/kill-other-buffers (&optional arg)
+  "Kill all other buffers. With ARG kill windows, too."
+  (interactive "P")
+  (when (y-or-n-p (format "Killing all buffers except \"%s\"? "
+                          (buffer-name)))
+    (mapc 'kill-buffer (delq (current-buffer) (buffer-list)))
+    (when (equal '(4) arg) (delete-other-windows))
+    (message "Buffers deleted!")))
+#+end_src
+** normalize-buffer
+http://www.bartuka.com/pages-output/personal-emacs-configuration/#org733aff2
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/normalize-buffer ()
+  "Function to organize the buffer's whitespace and indentation formatting"
+  (interactive)
+  (save-excursion
+    (delete-trailing-whitespace)
+    (untabify (point-min) (point-max))
+    (indent-region (point-min) (point-max))))
+#+end_src
+** org-fix-close-times
+I often will forget mark an org item as closed when I actually do it. This function
+allows me to keep the closed times in sync with the original deadlines.
+I may generalize it if needed.
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/org-fix-close-times (&optional from to)
+  "Match current entry's close time to its scheduled or deadline time.
+If FROM and TO are non-nil, do the same for entries marked done in that region.
+Only operates on entries with a TODO state that is a member of `org-done-keywords'."
+  (interactive "r")
+  (if (org-entry-is-done-p)
+      (progn
+        (if (use-region-p)
+            (progn
+              (deactivate-mark)
+              (org-map-region #'my/org-fix-close-times from to)))
+        (if-let* ((timestamp (or (org-entry-get (point) "SCHEDULED")
+                                 (org-entry-get (point) "DEADLINE")))
+                  (time (org-time-string-to-time timestamp)))
+            (org-add-planning-info 'closed time)
+          (message "%s" "No DEADLINE or SCHEDULED timestamp found for entry. Skipping entry.")))
+    (message "%s" "Org entry isn't marked done. Skipping entry.")))
+#+end_src
+** org-remove-timestamp-time
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/org-remove-timestamp-time ()
+  (interactive)
+  (save-excursion
+    (save-restriction
+      (save-match-data
+        (org-narrow-to-subtree)
+        (let* ((point (goto-char (point-min)))
+               (repeater (org-get-repeat))
+               (lead-time (progn
+                            (save-excursion
+                              (and (re-search-forward
+                                    ;; broken with internal time-stamp range.
+                                    "-\\([0-9]+\\)\\([hdwmy]\\)\\(\\'\\|>\\| \\)" nil t)
+                                   (concat (match-string 1) (match-string 2))))))
+               (replacement (format-time-string
+                             (concat "<%Y-%m-%d %a"
+                                     (when repeater (concat " " repeater))
+                                     (when lead-time (concat " -" lead-time))
+                                     ">")
+                             (or (org-get-scheduled-time point)
+                                 (org-get-deadline-time point)))))
+          (when (re-search-forward org-stamp-time-of-day-regexp nil t)
+            (replace-match replacement)))))))
+#+end_src
+** org-journal
+Both of these functions patch the behavior of org-journal.
+The first allows me to create a journal entry on a date of my choosing.
+(The normal behavior is to automatically create a journal for the current date...)
+The second pulls some information from the agenda log to pre-populate a journal template.
+
+I will be replacing org-journal with my own journal package once I finish it.
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/org-journal-new-entry (edit &optional from-string)
+  "Wrapper around org-journal-new-entry that utilizes org-read-date for date selection.
+When EDIT is nil, the journal opens in view only mode. Otherwise, it opens in edit mode."
+  (interactive)
+  (let ((time (org-read-date nil t from-string)))
+    (org-journal-new-entry edit time)))
+
+;;;###autoload
+(defun my/org-journal-entry-from-agenda-buffer (&optional edit)
+  "Uses first date line in agenda buffer as date argument for `my/org-journal-new-entry'."
+  (interactive)
+  (unless  (derived-mode-p 'org-agenda-mode)
+    (user-error "Not in an Org agenda buffer"))
+  (save-excursion
+    (goto-char (point-min))
+    (org-agenda-next-date-line)
+    (re-search-forward ".*day[[:space:]]*\\(.*\\)?$" nil t)
+    (let ((time (org-read-date
+                 nil t
+                 (substring-no-properties (concat
+                                           (match-string 1)
+                                           (format-time-string "%H:%M"
+                                                               (current-time)))))))
+      (org-journal-new-entry edit time))))
+#+end_src
+*** TODO refactor to use universal arg
+with arg view, without edit.
+** org-toggle-hide-emphasis-markers
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/org-toggle-hide-emphasis-markers (&optional arg)
+  "Toggle the value of `org-hide-emphasis-markers'.
+If ARG is non-nil, the effect is global.
+Otherwise, the effect is buffer-local."
+  (interactive "P")
+  (let* ((current-value org-hide-emphasis-markers)
+         (toggled (not current-value))
+         (result (concat "org-hide-emphasis set to " (format "%s" toggled))))
+    (if arg
+        (progn
+          (setq org-hide-emphasis-markers toggled)
+          (setq result (concat result " globally")))
+      (setq-local org-hide-emphasis-markers toggled)
+      (setq result (concat result " in buffer " (buffer-name))))
+    (font-lock-flush)
+    (font-lock-ensure)
+    (message "%s" result)))
+#+end_src
+** recompile-user-package-dir
+ #+begin_src emacs-lisp
+(defun my/recompile-user-package-dir ()
+  (interactive)
+  "Recompile `package-user-dir'"
+  (byte-recompile-directory package-user-dir nil 'force))
+ #+end_src
+** server-eval-all
+I use a number of Emacs of servers daily. When I make changes to my =init.org=, I
+want those changes to propagate to all running servers.
+#+begin_src emacs-lisp
+(defun my/server-eval-all (form)
+  "Evaluate FORM on each client of an Emacs server.
+FORM is a quoted list of expressions."
+  (let* ((files (directory-files server-socket-dir nil nil t))
+         (sockets (seq-filter (lambda (file)
+                                (not (member file '("." ".."))))
+                              files)))
+    (mapcar (lambda (socket)
+              (message (concat "evaling on " socket))
+              (server-eval-at socket form))
+            sockets)))
+#+end_src
+
+*** TODO [[file:~/.emacs.d/lisp/my/server-eval-all/my/server-eval-all.el::(defun%20my/server-eval-all%20(form)][bug with font rendering]]
+Evaluating lisp on all servers seems to garble org-ellipses and org-bullets. Not
+sure why yet.
+
+** toggle-maximize-buffer
+#+begin_src emacs-lisp
+(defun my/toggle-maximize-buffer ()
+  "Maximize current buffer"
+  (interactive)
+  (if (= 1 (length (window-list)))
+      (jump-to-register '_)
+    (progn
+      (window-configuration-to-register '_)
+      (delete-other-windows))))
+#+end_src
+** toggle-mode
+I frequently toggle some modes, so they have dedicated key bindings. However,
+it's nice to have a helm menu to filter modes interactively and toggle from
+that. There are similar packages on MELPA: =helm-mode-manager= & =helm-describe-modes=. However, the
+former doesn't toggle modes and the latter hides it as an action in Helm.
+#+begin_src emacs-lisp
+
+(defun my/simple-mode-toggle (mode)
+  ;;prevent nil entries from helm
+  (unless (not mode)
+    (call-interactively mode)))
+
+(defun my/list-modes ()
+  "Returns list of potential major mode names (without the final -mode).
+Note, that this is guess work."
+  (interactive)
+  (let (mode-list)
+    (mapatoms (lambda (f)
+                (let ((name (symbol-name f)))
+                  (and
+                   (commandp f)
+                   (string-match "-mode$" name)
+                   (not (string-match "--" name))
+                   (push (replace-regexp-in-string "-mode$" "" name mode-list)
+                         mode-list)))))
+    (cl-sort mode-list #'string-lessp :key 'downcase)))
+
+;;;###autoload
+(defun my/toggle-mode ()
+  (interactive)
+  (let ((target-mode (completing-read "Toggle Mode: " (my/list-modes))))
+    (my/simple-mode-toggle (intern-soft (concat target-mode "-mode")))))
+#+end_src
+** toggle-relative-lines
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/toggle-relative-lines ()
+  "Toggles display-line-numbers mode with a 'relative argument."
+  (interactive)
+  (if display-line-numbers
+      (setq display-line-numbers nil)
+    (setq display-line-numbers 'relative)))
+#+end_src
+** toggle-syntax-highlighting
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/toggle-syntax-highlighting ()
+  "Toggles font-lock-mode (syntax highlighting)"
+  (interactive)
+  (let ((status ""))
+    (if (bound-and-true-p font-lock-mode)
+        (progn
+          (font-lock-mode -1)
+          (setq status "disabled"))
+      (setq status "enabled")
+      (font-lock-mode)
+      (font-lock-ensure))
+    (message "syntax highlighting %s" status)))
+#+end_src
+** universal-arg
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/universal-arg (arg)
+  (interactive "P")
+  (if arg (universal-argument-more arg)
+    (universal-argument)))
+#+end_src
+* Footer
+:PROPERTIES:
+:header-args: :noweb-ref footer
+:END:
+#+BEGIN_SRC emacs-lisp
+(provide 'miscellany)
+
+;;; miscellany.org ends here
+#+END_SRC
