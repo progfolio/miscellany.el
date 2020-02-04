@@ -2,7 +2,7 @@
 #  LocalWords:  TODOS yasnippet magit epub LocalWords MELPA ELPA init Spacemacs symlinked Elisp gc PDF Paren alist recentf smtpmail modeline zerodark quickhelp esup TLS vterm flycheck elfeed flyspell autoload descbinds :PROPERTIES:
 #+title: Miscellany.org
 #+options: ^:{} html-postamble:nil
-#+property: header-args :mkdirp yes :tangle (concat (file-name-sans-extension (buffer-file-name)) ".el") :tangle-mode (identity #o444) :results silent :noweb yes
+#+property: header-args :mkdirp yes :tangle (concat (file-name-sans-extension (buffer-file-name)) ".el") :tangle-mode (identity #o444) :results silent :noweb yes :noweb-sep "\n\n"
 #+archive: archives/%s::datetree/
 #+startup: indent
 
@@ -38,7 +38,7 @@
 #+end_src
 * Functions
 :PROPERTIES:
-:header-args: :noweb-ref functions
+:header-args: :noweb-ref functions :noweb-sep "\n\n"
 :END:
 ** alternate-buffer
 Stolen from Spacemacs.
@@ -238,28 +238,55 @@ Otherwise, the effect is buffer-local."
     (message "%s" result)))
 #+end_src
 ** recompile-user-package-dir
- #+begin_src emacs-lisp
+#+begin_src emacs-lisp
+;;;###autoload
 (defun my/recompile-user-package-dir ()
   (interactive)
   "Recompile `package-user-dir'"
   (byte-recompile-directory package-user-dir nil 'force))
- #+end_src
-** server-eval-all
-I use a number of Emacs of servers daily. When I make changes to my =init.org=, I
-want those changes to propagate to all running servers.
-#+begin_src emacs-lisp
-(defun my/server-eval-all (form)
-  "Evaluate FORM on each client of an Emacs server.
-FORM is a quoted list of expressions."
-  (let* ((files (directory-files server-socket-dir nil nil t))
-         (sockets (seq-filter (lambda (file)
-                                (not (member file '("." ".."))))
-                              files)))
-    (mapcar (lambda (socket)
-              (message (concat "evaling on " socket))
-              (server-eval-at socket form))
-            sockets)))
 #+end_src
+** server-eval-all
+I use a number of Emacs of servers daily.
+This macro allows running code on a group of servers by name.
+#+begin_src emacs-lisp
+;;;###autoload
+(defmacro my/with-servers (servers &rest body)
+  "Evaluate BODY on each client in SERVERS.
+If SERVERS is the symbol \\='all, evaluate BODY on all servers."
+  (declare (indent defun))
+  (let* ((files (directory-files server-socket-dir nil nil t))
+         (sockets (cond
+                   ((eq 'all servers)
+                    (seq-filter (lambda (file)
+                                  (not (member file '("." ".."))))
+                                files))
+                   ((and (listp servers)
+                         (seq-every-p #'stringp servers))
+                    servers)
+                   (t (signal 'wrong-type-error `(((stringp), t) ,servers))))))
+    `(let (current-server)
+       (condition-case err
+           (let ((servers (mapc (lambda (socket)
+                                  (setq current-server socket)
+                                  (server-eval-at socket '(progn ,@body nil)))
+                                ',sockets)))
+             (format "evaled on %d servers: %s" (length servers) servers))
+         (error (message "%s on server %s" err current-server))))))
+#+end_src
+A couple of example:
+#+begin_example emacs-lisp
+(defun my/kill-other-servers ()
+  "Kill other Emacs servers."
+  (eval `(my/with-servers all
+           (when (not (equal server-name ,server-name))
+             (kill-emacs)))))
+#+end_example
+
+#+begin_example emacs-lisp
+(defun my/reload-init-on-all-servers ()
+  (my/with-servers all
+    (load-file "~/.emacs.d/init.el")))
+#+end_example
 
 *** TODO [[file:~/.emacs.d/lisp/my/server-eval-all/my/server-eval-all.el::(defun%20my/server-eval-all%20(form)][bug with font rendering]]
 Evaluating lisp on all servers seems to garble org-ellipses and org-bullets. Not
@@ -267,6 +294,7 @@ sure why yet.
 
 ** toggle-maximize-buffer
 #+begin_src emacs-lisp
+;;;###autoload
 (defun my/toggle-maximize-buffer ()
   "Maximize current buffer"
   (interactive)
