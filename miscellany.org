@@ -371,6 +371,22 @@ Note, that this is guess work."
   (if arg (universal-argument-more arg)
     (universal-argument)))
 #+end_src
+** package-lint
+package-lint assumes package.el is the package manager.
+I use straight.el, so I get spurious warnings about packages not being installable.
+This workaround creates a temporary package archive and enables package.el to appease package-lint.
+
+#+begin_src emacs-lisp
+(defun +package-lint-straight ()
+  "Help package-lint deal with straight."
+  (interactive)
+  (require 'package)
+  (setq package-user-dir "/tmp/elpa")
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (package-initialize)
+  (package-refresh-contents))
+#+end_src
+
 * Footer
 :PROPERTIES:
 :header-args: :noweb-ref footer
