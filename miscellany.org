@@ -378,6 +378,7 @@ I use straight.el, so I get spurious warnings about packages not being installab
 This workaround creates a temporary package archive and enables package.el to appease package-lint.
 
 #+begin_src emacs-lisp
+;;;###autoload
 (defun +package-lint-straight ()
   "Help package-lint deal with straight."
   (interactive)
