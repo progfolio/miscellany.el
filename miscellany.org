@@ -26,7 +26,7 @@ or include them with a =+= prefix in my configuration for the mode the extend.
 :END:
 
 #+begin_src emacs-lisp
-;;; miscellany.org --- Miscellany: Miscellaneous Emacs functions -*- lexical-binding: t; -**-
+;;; miscellany.el --- Miscellany: Miscellaneous Emacs functions -*- lexical-binding: t; -**-
 
 ;;; Commentary:
 ;;A collection of miscellaneous functions.
