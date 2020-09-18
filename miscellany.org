@@ -165,17 +165,8 @@ Only operates on entries with a TODO state that is a member of `org-done-keyword
         (org-narrow-to-subtree)
         (let* ((point (goto-char (point-min)))
                (repeater (org-get-repeat))
-               (lead-time (progn
-                            (save-excursion
-                              (and (re-search-forward
-                                    ;; broken with internal time-stamp range.
-                                    "-\\([0-9]+\\)\\([hdwmy]\\)\\(\\'\\|>\\| \\)" nil t)
-                                   (concat (match-string 1) (match-string 2))))))
                (replacement (format-time-string
-                             (concat "<%Y-%m-%d %a"
-                                     (when repeater (concat " " repeater))
-                                     (when lead-time (concat " -" lead-time))
-                                     ">")
+                             (concat "<%Y-%m-%d %a" (when repeater (concat " " repeater)) ">")
                              (or (org-get-scheduled-time point)
                                  (org-get-deadline-time point)))))
           (when (re-search-forward org-stamp-time-of-day-regexp nil t)
@@ -311,12 +302,6 @@ it's nice to have a helm menu to filter modes interactively and toggle from
 that. There are similar packages on MELPA: =helm-mode-manager= & =helm-describe-modes=. However, the
 former doesn't toggle modes and the latter hides it as an action in Helm.
 #+begin_src emacs-lisp
-
-(defun my/simple-mode-toggle (mode)
-  ;;prevent nil entries from helm
-  (unless (not mode)
-    (call-interactively mode)))
-
 (defun my/list-modes ()
   "Returns list of potential major mode names (without the final -mode).
 Note, that this is guess work."
@@ -333,10 +318,16 @@ Note, that this is guess work."
     (cl-sort mode-list #'string-lessp :key 'downcase)))
 
 ;;;###autoload
-(defun my/toggle-mode ()
+(defun my/toggle-mode (&optional mode &rest args)
+  "Toggle MODE. Prompt for MODE if it is nil.
+MODE must be a string without the -mode suffix."
   (interactive)
-  (let ((target-mode (completing-read "Toggle Mode: " (my/list-modes))))
-    (my/simple-mode-toggle (intern-soft (concat target-mode "-mode")))))
+  (if-let* ((mode (concat
+                   (or mode (completing-read "Toggle Mode: " (my/list-modes)))
+                   "-mode"))
+            (mode-symbol (intern-soft mode)))
+      (if args (apply mode-symbol args) (call-interactively mode-symbol))
+    (user-error "Uknown mode: %s" mode)))
 #+end_src
 ** toggle-relative-lines
 #+begin_src emacs-lisp
