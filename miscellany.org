@@ -5,7 +5,12 @@
 #+property: header-args :mkdirp yes :tangle (concat (file-name-sans-extension (buffer-file-name)) ".el") :tangle-mode (identity #o444) :results silent :noweb yes :noweb-sep "\n\n"
 #+archive: archives/%s::datetree/
 #+startup: indent
+* Motivation
+This is a place for miscellaneous functions to live while I try them out.
+Once they have matured, I will either break them out into their own packages,
+or include them with a =+= prefix in my configuration for the mode the extend.
 
+* Structure
 #+begin_src emacs-lisp
 <<header>>
 
