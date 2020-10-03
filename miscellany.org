@@ -1,4 +1,4 @@
-;-*- eval: (progn (auto-tangle-mode) (add-hook 'auto-tangle-after-tangle-hook (lambda () (load-file "~/.emacs.d/init.el"))));   -*-
+;-*- eval: (progn (auto-tangle-mode)); lexical-binding: t;   -*-
 #  LocalWords:  TODOS yasnippet magit epub LocalWords MELPA ELPA init Spacemacs symlinked Elisp gc PDF Paren alist recentf smtpmail modeline zerodark quickhelp esup TLS vterm flycheck elfeed flyspell autoload descbinds :PROPERTIES:
 #+title: Miscellany.org
 #+options: ^:{} html-postamble:nil
