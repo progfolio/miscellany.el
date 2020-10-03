@@ -77,6 +77,20 @@ https://www.reddit.com/r/emacs/comments/8qkkh9/poll_theme_activation_on_loading/
     (apply (if (called-interactively-p 'any) #'funcall-interactively #'funcall)
            #'load-theme args)))
 #+end_src
+** theme-nth
+#+begin_src emacs-lisp
+;;;###autoload
+(defun my/theme-nth (&optional n)
+  "Select Nth next theme. N must be an integer."
+  (interactive "N")
+  (let* ((sorted (sort (custom-available-themes) #'string< ))
+         (len (length sorted))
+         ;; Highest precedence theme used for index
+         (index (- len (length (member (car custom-enabled-themes) sorted))))
+         (next (nth (mod (+ n index) len) sorted)))
+    (my/change-theme next)
+    (message "%S theme loaded" next)))
+#+end_src
 ** compute-blood-pressure-table-row
 #+begin_src emacs-lisp
 ;;;###autoload
