@@ -16,6 +16,8 @@ or include them with a =+= prefix in my configuration for the mode the extend.
 
 <<requirements>>
 
+<<group>>
+
 <<functions>>
 
 <<footer>>
@@ -42,6 +44,16 @@ or include them with a =+= prefix in my configuration for the mode the extend.
 #+begin_src emacs-lisp
 (require 'cl-lib)
 #+end_src
+* Group
+:PROPERTIES:
+:header-args: :noweb-ref group :noweb-sep "\n\n"
+:END:
+#+begin_src emacs-lisp :lexical t
+(defgroup miscellany nil
+  "Miscellaneous functionality."
+  :group 'Emacs
+  :prefix "+")
+#+end_src
 * Functions
 :PROPERTIES:
 :header-args: :noweb-ref functions :noweb-sep "\n\n"
@@ -50,7 +62,7 @@ or include them with a =+= prefix in my configuration for the mode the extend.
 Stolen from Spacemacs.
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/alternate-buffer (&optional window)
+(defun +alternate-buffer (&optional window)
   "Switch between current and last buffer in the current WINDOW."
   (interactive)
   (let ((current-buffer (window-buffer window)))
@@ -65,7 +77,7 @@ Stolen from Spacemacs.
 https://www.reddit.com/r/emacs/comments/8qkkh9/poll_theme_activation_on_loading/
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/change-theme (&rest args)
+(defun +change-theme (&rest args)
   "Disable all themes before loading one. ARGS passed to `load-theme'."
   ;;The `interactive' magic is for creating a future-proof passthrough.
   (interactive (advice-eval-interactive-spec
@@ -79,7 +91,7 @@ https://www.reddit.com/r/emacs/comments/8qkkh9/poll_theme_activation_on_loading/
 ** theme-nth
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/theme-nth (&optional n)
+(defun +theme-nth (&optional n)
   "Select Nth next theme. N must be an integer."
   (interactive "N")
   (let* ((sorted (sort (custom-available-themes) #'string< ))
@@ -87,14 +99,14 @@ https://www.reddit.com/r/emacs/comments/8qkkh9/poll_theme_activation_on_loading/
          ;; Highest precedence theme used for index
          (index (- len (length (member (car custom-enabled-themes) sorted))))
          (next (nth (mod (+ n index) len) sorted)))
-    (my/change-theme next)
+    (+change-theme next)
     (message "%S theme loaded" next)))
 #+end_src
 ** compute-blood-pressure-table-row
 #+begin_src emacs-lisp
 (declare-function org-time-stamp "org")
 ;;;###autoload
-(defun my/compute-blood-pressure-table-row ()
+(defun +compute-blood-pressure-table-row ()
   "Compute blood pressure table row."
   (if-let ((systolic (read-number "Systolic:"))
            (diastolic (read-number "Diastolic:"))
@@ -128,7 +140,7 @@ Killing all other buffers can be useful if the list gets cluttered.
 Found at http://emacswiki.org/emacs/KillingBuffers
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/kill-other-buffers (&optional arg)
+(defun +kill-other-buffers (&optional arg)
   "Kill all other buffers. With ARG kill windows, too."
   (interactive "P")
   (when (y-or-n-p (format "Killing all buffers except \"%s\"? "
@@ -141,7 +153,7 @@ Found at http://emacswiki.org/emacs/KillingBuffers
 http://www.bartuka.com/pages-output/personal-emacs-configuration/#org733aff2
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/normalize-buffer ()
+(defun +normalize-buffer ()
   "Function to organize the buffer's whitespace and indentation formatting."
   (interactive)
   (save-excursion
@@ -160,7 +172,7 @@ I may generalize it if needed.
 (declare-function org-time-string-to-time "org")
 (declare-function org-add-planning-info "org")
 ;;;###autoload
-(defun my/org-fix-close-times (&optional from to)
+(defun +org-fix-close-times (&optional from to)
   "Match current entry's close time to its scheduled or deadline time.
 If FROM and TO are non-nil, do the same for entries marked done in that region.
 Only operates on entries with a TODO state that is a member of `org-done-keywords'."
@@ -170,7 +182,7 @@ Only operates on entries with a TODO state that is a member of `org-done-keyword
         (if (use-region-p)
             (progn
               (deactivate-mark)
-              (org-map-region #'my/org-fix-close-times from to)))
+              (org-map-region #'+org-fix-close-times from to)))
         (if-let* ((timestamp (or (org-entry-get (point) "SCHEDULED")
                                  (org-entry-get (point) "DEADLINE")))
                   (time (org-time-string-to-time timestamp)))
@@ -186,7 +198,7 @@ Only operates on entries with a TODO state that is a member of `org-done-keyword
 (declare-function org-get-scheduled-time "org")
 (declare-function org-get-deadline-time "org")
 ;;;###autoload
-(defun my/org-remove-timestamp-time ()
+(defun +org-remove-timestamp-time ()
   "Remove hh:mm from timestamp."
   (interactive)
   (save-excursion
@@ -206,7 +218,7 @@ Only operates on entries with a TODO state that is a member of `org-done-keyword
 #+begin_src emacs-lisp
 (defvar org-hide-emphasis-markers)
 ;;;###autoload
-(defun my/org-toggle-hide-emphasis-markers (&optional arg)
+(defun +org-toggle-hide-emphasis-markers (&optional arg)
   "Toggle the value of `org-hide-emphasis-markers'.
 If ARG is non-nil, the effect is global.
 Otherwise, the effect is buffer-local."
@@ -230,7 +242,7 @@ This macro allows running code on a group of servers by name.
 #+begin_src emacs-lisp
 (defvar server-socket-dir)
 ;;;###autoload
-(defmacro my/with-servers (servers &rest body)
+(defmacro +with-servers (servers &rest body)
   "Evaluate BODY on each client in SERVERS.
 If SERVERS is the symbol \\='all, evaluate BODY on all servers."
   (declare (indent defun))
@@ -256,27 +268,27 @@ If SERVERS is the symbol \\='all, evaluate BODY on all servers."
 
 A couple of examples:
 #+begin_example emacs-lisp
-(defun my/kill-other-servers ()
+(defun +kill-other-servers ()
   "Kill other Emacs servers."
-  (eval `(my/with-servers all
+  (eval `(+with-servers all
            (when (not (equal server-name ,server-name))
              (kill-emacs)))))
 #+end_example
 
 #+begin_example emacs-lisp
-(defun my/reload-init-on-all-servers ()
-  (my/with-servers all
+(defun +reload-init-on-all-servers ()
+  (+with-servers all
     (load-file "~/.emacs.d/init.el")))
 #+end_example
 
-*** TODO [[file:~/.emacs.d/lisp/my/server-eval-all/my/server-eval-all.el::(defun%20my/server-eval-all%20(form)][bug with font rendering]]
+*** TODO [[file:~/.emacs.d/lisp/+server-eval-all/+server-eval-all.el::(defun%20+server-eval-all%20(form)][bug with font rendering]]
 Evaluating lisp on all servers seems to garble org-ellipses and org-bullets. Not
 sure why yet.
 
 ** toggle-maximize-buffer
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/toggle-maximize-buffer ()
+(defun +toggle-maximize-buffer ()
   "Maximize current buffer."
   (interactive)
   (if (= 1 (length (window-list)))
@@ -291,7 +303,7 @@ it's nice to have a helm menu to filter modes interactively and toggle from
 that. There are similar packages on MELPA: =helm-mode-manager= & =helm-describe-modes=. However, the
 former doesn't toggle modes and the latter hides it as an action in Helm.
 #+begin_src emacs-lisp
-(defun my/list-modes ()
+(defun +list-modes ()
   "Return list of potential major mode names (without the final -mode).
 Note, that this is guess work."
   (interactive)
@@ -307,13 +319,13 @@ Note, that this is guess work."
     (cl-sort mode-list #'string-lessp :key 'downcase)))
 
 ;;;###autoload
-(defun my/toggle-mode (&optional mode &rest args)
+(defun +toggle-mode (&optional mode &rest args)
   "Toggle MODE. Prompt for MODE if it is nil.
 MODE must be a string without the -mode suffix.
 ARGS are passed to the MODE command."
   (interactive)
   (if-let* ((mode (concat
-                   (or mode (completing-read "Toggle Mode: " (my/list-modes)))
+                   (or mode (completing-read "Toggle Mode: " (+list-modes)))
                    "-mode"))
             (mode-symbol (intern-soft mode)))
       (if args (apply mode-symbol args) (call-interactively mode-symbol))
@@ -322,7 +334,7 @@ ARGS are passed to the MODE command."
 ** toggle-relative-lines
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/toggle-relative-lines ()
+(defun +toggle-relative-lines ()
   "Toggle `display-line-numbers' mode with a 'relative argument."
   (interactive)
   (if display-line-numbers
@@ -332,7 +344,7 @@ ARGS are passed to the MODE command."
 ** toggle-syntax-highlighting
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/toggle-syntax-highlighting ()
+(defun +toggle-syntax-highlighting ()
   "Toggle command `font-lock-mode' (syntax highlighting)."
   (interactive)
   (let ((status ""))
@@ -348,7 +360,7 @@ ARGS are passed to the MODE command."
 ** universal-arg
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun my/universal-arg (arg)
+(defun +universal-arg (arg)
   "Simulate universal arg key press.
 If ARG is present it is added to current universal arg."
   (interactive "P")
@@ -360,7 +372,7 @@ Adam (github-alphapapa) provided this command here:
 https://www.reddit.com/r/emacs/comments/idz35e/emacs_27_can_take_svg_screenshots_of_itself/
 
 #+begin_src emacs-lisp
-(defun my/screenshot-svg ()
+(defun +screenshot-svg ()
   "Save a screenshot of the current frame as an SVG image.
 Saves to a temp file and puts the filename in the kill ring."
   (interactive)
