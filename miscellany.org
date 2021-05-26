@@ -34,7 +34,7 @@ or include them with a =+= prefix in my configuration for the mode the extend.
 ;;A collection of miscellaneous functions.
 ;;If a group of functions serve similar purposes, I'll spin them off into their own package.
 
-;;; SOURCE FILE WAS TANLGED FROM LITERATE FILE. EDIT LITERATE FILE TO MAKE CHANGES.
+;;; SOURCE FILE TANLGED FROM LITERATE FILE. EDIT LITERATE FILE TO MAKE CHANGES.
 ;;; Code:
 #+end_src
 * Requirements
