@@ -175,7 +175,7 @@ I may generalize it if needed.
 (defun +org-fix-close-times (&optional from to)
   "Match current entry's close time to its scheduled or deadline time.
 If FROM and TO are non-nil, do the same for entries marked done in that region.
-Only operates on entries with a TODO state that is a member of `org-done-keywords'."
+Only operates on entries with a TODO state in `org-done-keywords'."
   (interactive "r")
   (if (org-entry-is-done-p)
       (progn
@@ -335,7 +335,7 @@ ARGS are passed to the MODE command."
 #+begin_src emacs-lisp
 ;;;###autoload
 (defun +toggle-relative-lines ()
-  "Toggle `display-line-numbers' mode with a 'relative argument."
+  "Toggle `display-line-numbers' mode with a \\='relative argument."
   (interactive)
   (if display-line-numbers
       (setq display-line-numbers nil)
