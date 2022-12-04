@@ -394,3 +394,7 @@ Saves to a temp file and puts the filename in the kill ring."
 
 ;;; miscellany.el ends here
 #+END_SRC
+
+# Local Variables:
+# org-confirm-babel-evaluate: nil
+# End:
