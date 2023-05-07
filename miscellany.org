@@ -373,14 +373,15 @@ https://www.reddit.com/r/emacs/comments/idz35e/emacs_27_can_take_svg_screenshots
 
 #+begin_src emacs-lisp
 ;;;###autoload
-(defun +screenshot-svg (path)
-  "Save a screenshot of the current frame as an SVG image to PATH."
+(defun +screenshot (path)
+  "Save a screenshot of the current frame to PATH.
+PATH extension determines file type (defaults to png)."
   (interactive "Fsave screenshot to: ")
-  (when-let ((path (concat (file-name-sans-extension (expand-file-name path)) ".svg"))
+  (when-let ((ext (or (file-name-extension path) "png"))
              ((or (not (file-exists-p path))
                  (yes-or-no-p (format "overwrite %S?" path)))))
     (with-temp-buffer
-      (insert (x-export-frames nil 'svg))
+      (insert (x-export-frames nil (intern ext)))
       (write-region (point-min) (point-max) path))))
 #+end_src
 *** TODO extend this into a package
