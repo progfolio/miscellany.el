@@ -379,7 +379,7 @@ PATH extension determines file type (defaults to png)."
   (interactive "Fsave screenshot to: ")
   (when-let ((ext (or (file-name-extension path) "png"))
              ((or (not (file-exists-p path))
-                 (yes-or-no-p (format "overwrite %S?" path)))))
+                  (yes-or-no-p (format "overwrite %S?" path)))))
     (with-temp-buffer
       (insert (x-export-frames nil (intern ext)))
       (write-region (point-min) (point-max) path))))
