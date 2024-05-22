@@ -291,11 +291,12 @@ sure why yet.
 (defun +toggle-maximize-buffer ()
   "Maximize current buffer."
   (interactive)
-  (if (= 1 (length (window-list)))
-      (jump-to-register '_)
-    (progn
-      (window-configuration-to-register '_)
-      (delete-other-windows))))
+  (unless (minibufferp)
+    (if (= 1 (length (window-list)))
+        (jump-to-register '_)
+      (progn
+        (window-configuration-to-register '_)
+        (delete-other-windows)))))
 #+end_src
 ** toggle-mode
 I frequently toggle some modes, so they have dedicated key bindings. However,
